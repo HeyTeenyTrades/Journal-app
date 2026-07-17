@@ -90,6 +90,11 @@
   }
   input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .pnl-row { display: flex; gap: 8px; align-items: stretch; }
+  .pnl-toggle { display: flex; border: 1px solid var(--border2); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+  .pnl-toggle-btn { background: var(--surface); color: var(--muted); border: none; padding: 10px 14px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .pnl-toggle-btn.win.active { background: rgba(70,194,166,0.18); color: var(--win); }
+  .pnl-toggle-btn.loss.active { background: rgba(241,96,99,0.18); color: var(--loss); }
   .error-text { color: var(--loss); font-size: 12px; margin-top: 4px; }
   .tag-chip { font-size: 10px; color: var(--accent); background: rgba(232,176,73,0.12); border: 1px solid rgba(232,176,73,0.3); border-radius: 20px; padding: 2px 8px; font-weight: 600; }
   .tag-input-wrap { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 8px 10px; }
@@ -172,7 +177,7 @@
   }
   function emptyDraft() {
     return { symbol: "", date: todayStr(), time: "", direction: "Long", session: "London",
-      entryPrice: "", exitPrice: "", pnl: "", rr: "", notes: "", tags: [], tagDraft: "", image: null };
+      entryPrice: "", exitPrice: "", pnl: "", pnlSign: "win", rr: "", notes: "", tags: [], tagDraft: "", image: null };
   }
   function loadDraft() {
     try {
@@ -386,10 +391,16 @@
         '<div class="field"><div class="field-label">Entry price</div><input id="f-entryPrice" value="' + escapeHtml(d.entryPrice) + '" placeholder="0.69358"></div>' +
         '<div class="field"><div class="field-label">Exit price</div><input id="f-exitPrice" value="' + escapeHtml(d.exitPrice) + '" placeholder="0.69236"></div>' +
       '</div>' +
-      '<div class="row2">' +
-        '<div class="field"><div class="field-label">P&L ($)</div><input id="f-pnl" value="' + escapeHtml(d.pnl) + '" placeholder="e.g. 5710 or -320" inputmode="decimal"></div>' +
-        '<div class="field"><div class="field-label">RR (1:x)</div><input id="f-rr" value="' + escapeHtml(d.rr) + '" placeholder="5.71" inputmode="decimal"></div>' +
+      '<div class="field"><div class="field-label">P&L ($)</div>' +
+        '<div class="pnl-row">' +
+          '<div class="pnl-toggle">' +
+            '<button type="button" class="pnl-toggle-btn win' + (d.pnlSign === "win" ? " active" : "") + '" data-action="set-pnl-sign" data-sign="win">Win</button>' +
+            '<button type="button" class="pnl-toggle-btn loss' + (d.pnlSign === "loss" ? " active" : "") + '" data-action="set-pnl-sign" data-sign="loss">Loss</button>' +
+          '</div>' +
+          '<input id="f-pnl" value="' + escapeHtml(d.pnl) + '" placeholder="e.g. 5710" inputmode="decimal" style="flex:1;">' +
+        '</div>' +
       '</div>' +
+      '<div class="field"><div class="field-label">RR (1:x)</div><input id="f-rr" value="' + escapeHtml(d.rr) + '" placeholder="5.71" inputmode="decimal"></div>' +
       '<div class="field"><div class="field-label">Setup tags</div>' +
         '<div class="tag-input-wrap" id="tag-wrap">' +
           (d.tags || []).map((t) => '<span class="tag-chip-editable">' + escapeHtml(t) + '<button type="button" class="tag-chip-remove" data-action="remove-tag" data-tag="' + escapeHtml(t) + '">' + ICON.x + '</button></span>').join("") +
@@ -571,7 +582,7 @@
       const key = map[id];
       const evt = (el.tagName === "SELECT") ? "change" : "input";
       el.addEventListener(evt, () => {
-        state.draft[key] = el.value;
+        state.draft[key] = key === "pnl" ? el.value.replace(/-/g, "") : el.value;
         saveDraft(state.draft);
         // avoid full re-render for text inputs to keep cursor position / focus
         if (key === "tagDraft") return;
@@ -762,10 +773,13 @@
     if (!d.date) return setState({ formError: "Pick a date." });
     if (d.pnl === "" || isNaN(Number(d.pnl))) return setState({ formError: "Enter a P&L amount." });
 
+    const magnitude = Math.abs(Number(d.pnl));
+    const signedPnl = d.pnlSign === "loss" ? -magnitude : magnitude;
+
     const entry = {
       id: uid(),
       symbol: d.symbol.trim(), date: d.date, time: d.time, direction: d.direction, session: d.session,
-      entryPrice: d.entryPrice, exitPrice: d.exitPrice, pnl: Number(d.pnl), rr: d.rr,
+      entryPrice: d.entryPrice, exitPrice: d.exitPrice, pnl: signedPnl, rr: d.rr,
       notes: d.notes.trim(), tags: d.tags.slice(), image: d.image,
     };
     state.entries = [entry].concat(state.entries);
@@ -895,6 +909,11 @@
         break;
       case "gen-sync-code":
         state.syncDraft.syncCode = genSyncCode();
+        render();
+        break;
+      case "set-pnl-sign":
+        state.draft.pnlSign = target.getAttribute("data-sign");
+        saveDraft(state.draft);
         render();
         break;
       case "copy-sync-code":
