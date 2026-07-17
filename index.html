@@ -112,7 +112,9 @@
   .week-row { display: grid; grid-template-columns: repeat(7,1fr); margin-bottom: 6px; }
   .week-day { text-align: center; font-size: 10px; color: var(--muted2); font-weight: 700; }
   .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
-  .cal-cell { aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: transparent; border: 1px solid transparent; cursor: default; }
+  .cal-week { margin-bottom: 6px; }
+  .week-total-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px 4px; margin-bottom: 2px; font-size: 11px; letter-spacing: 0.5px; color: var(--muted2); font-weight: 700; font-family: ui-monospace, monospace; background: #0E141B; border-radius: 6px; border-bottom: 1px solid #1A2129; }
+  .cal-cell { aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: transparent; border: 1px solid transparent; cursor: default; overflow: hidden; min-height: 44px; }
   .cal-cell.has { cursor: pointer; }
   .cal-cell .d { font-size: 12px; color: var(--muted); }
   .cal-cell .amt { font-size: 10px; font-family: ui-monospace, monospace; font-weight: 700; }
@@ -152,6 +154,7 @@
   const LS_DRAFT = "tj_draft";
   const DIRECTIONS = ["Long", "Short"];
   const SESSIONS = ["Asia", "London", "NY AM", "NY PM"];
+  const SYMBOLS = ["XAUUSD", "MGC", "MNQ"];
 
   const uid = () => Date.now() + "-" + Math.random().toString(36).slice(2, 8);
   const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -176,7 +179,7 @@
     } catch (e) { return false; }
   }
   function emptyDraft() {
-    return { symbol: "", date: todayStr(), time: "", direction: "Long", session: "London",
+    return { symbol: "", symbolOther: false, date: todayStr(), time: "", direction: "Long", session: "London",
       entryPrice: "", exitPrice: "", pnl: "", pnlSign: "win", rr: "", notes: "", tags: [], tagDraft: "", image: null };
   }
   function loadDraft() {
@@ -378,7 +381,14 @@
       '<div class="section-label"><span>NEW ENTRY</span>' +
         (hasContent ? '<button class="discard-btn" data-action="discard-draft">Discard draft</button>' : '') +
       '</div>' +
-      '<div class="field"><div class="field-label">Symbol</div><input id="f-symbol" value="' + escapeHtml(d.symbol) + '" placeholder="AUDUSD"></div>' +
+      '<div class="field"><div class="field-label">Symbol</div>' +
+        '<select id="f-symbol-select">' +
+          '<option value="" disabled' + (!d.symbolOther && !SYMBOLS.includes(d.symbol) ? " selected" : "") + '>Select pair</option>' +
+          SYMBOLS.map((s) => '<option value="' + s + '"' + (!d.symbolOther && d.symbol === s ? " selected" : "") + '>' + s + '</option>').join("") +
+          '<option value="__other__"' + (d.symbolOther ? " selected" : "") + '>Other…</option>' +
+        '</select>' +
+        (d.symbolOther ? '<input id="f-symbol-custom" value="' + escapeHtml(d.symbol) + '" placeholder="Type symbol e.g. EURUSD" style="margin-top:8px;">' : "") +
+      '</div>' +
       '<div class="row2">' +
         '<div class="field"><div class="field-label">Date</div><input id="f-date" type="date" value="' + d.date + '"></div>' +
         '<div class="field"><div class="field-label">Time</div><input id="f-time" type="time" value="' + d.time + '"></div>' +
@@ -441,7 +451,7 @@
     });
     const monthName = new Date(year, m, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
-    let grid = cells.map((d) => {
+    function renderCell(d) {
       if (d === null) return '<div></div>';
       const key = dateKey(d);
       const list = byDay[key] || [];
@@ -457,7 +467,27 @@
           (has ? '<span class="amt" style="color:' + (up ? "var(--win)" : "var(--loss)") + '">' + (up ? "+" : "-") + "$" + (Math.abs(total) >= 1000 ? (Math.abs(total) / 1000).toFixed(1) + "k" : Math.abs(total).toFixed(0)) + '</span>' : "") +
         '</button>'
       );
-    }).join("");
+    }
+
+    let weeksHtml = "";
+    for (let i = 0; i < cells.length; i += 7) {
+      const weekCells = cells.slice(i, i + 7);
+      let weekTotal = 0;
+      let weekHas = false;
+      weekCells.forEach((d) => {
+        if (d === null) return;
+        const list = byDay[dateKey(d)] || [];
+        if (list.length) weekHas = true;
+        weekTotal += list.reduce((s, e) => s + Number(e.pnl || 0), 0);
+      });
+      const cellsHtml = weekCells.map(renderCell).join("");
+      const weekNum = Math.floor(i / 7) + 1;
+      weeksHtml +=
+        '<div class="cal-week">' +
+          '<div class="cal-grid">' + cellsHtml + '</div>' +
+          (weekHas ? '<div class="week-total-row"><span style="color:var(--muted2);letter-spacing:1px;">WEEK ' + weekNum + '</span><span style="color:' + (weekTotal >= 0 ? "var(--win)" : "var(--loss)") + ';font-size:12px;">' + fmtMoney(weekTotal) + '</span></div>' : "") +
+        '</div>';
+    }
 
     let drilldown = "";
     if (state.selectedDay && byDay[state.selectedDay]) {
@@ -474,7 +504,7 @@
         '<button class="icon-btn" data-action="cal-next">' + ICON.right + '</button>' +
       '</div>' +
       '<div class="week-row">' + ["S", "M", "T", "W", "T", "F", "S"].map((d) => '<div class="week-day">' + d + '</div>').join("") + '</div>' +
-      '<div class="cal-grid">' + grid + '</div>' +
+      weeksHtml +
       drilldown
     );
   }
@@ -573,7 +603,7 @@
   // ---------- form field wiring (since we re-render via innerHTML) ----------
   function wireFormEvents() {
     if (state.view !== "new") return;
-    const map = { "f-symbol": "symbol", "f-date": "date", "f-time": "time", "f-direction": "direction",
+    const map = { "f-date": "date", "f-time": "time", "f-direction": "direction",
       "f-session": "session", "f-entryPrice": "entryPrice", "f-exitPrice": "exitPrice", "f-pnl": "pnl",
       "f-rr": "rr", "f-notes": "notes", "f-tagDraft": "tagDraft" };
     Object.keys(map).forEach((id) => {
@@ -614,6 +644,37 @@
     const imageInput = document.getElementById("f-image");
     if (imageInput) {
       imageInput.addEventListener("change", handleImageFile);
+    }
+
+    // Handle symbol select dropdown
+    const symSelect = document.getElementById("f-symbol-select");
+    if (symSelect) {
+      symSelect.addEventListener("change", () => {
+        const val = symSelect.value;
+        if (val === "__other__") {
+          state.draft.symbolOther = true;
+          state.draft.symbol = "";
+        } else {
+          state.draft.symbolOther = false;
+          state.draft.symbol = val;
+        }
+        saveDraft(state.draft);
+        render();
+      });
+    }
+
+    // Handle symbol custom text input
+    const symCustom = document.getElementById("f-symbol-custom");
+    if (symCustom) {
+      symCustom.addEventListener("input", () => {
+        state.draft.symbol = symCustom.value;
+        saveDraft(state.draft);
+      });
+      if (document.activeElement && document.activeElement.id === "f-symbol-custom") {
+        symCustom.focus();
+        const val = symCustom.value;
+        try { symCustom.setSelectionRange(val.length, val.length); } catch (e) {}
+      }
     }
   }
 
