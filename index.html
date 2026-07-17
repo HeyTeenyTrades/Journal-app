@@ -253,6 +253,8 @@
     gauge: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path><path d="M19.07 4.93A10 10 0 0 0 3.34 17.5"></path><path d="M20.66 17.5A10 10 0 0 0 12 2"></path></svg>',
     image: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>',
     x: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+    cloud: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>',
+    copy: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>',
   };
 
   // ---------- derived ----------
@@ -308,9 +310,13 @@
 
   function renderHeader(stats) {
     const positive = stats.total >= 0;
+    const dotClass = state.syncStatus === "on" ? "on" : state.syncStatus === "error" ? "off" : "";
+    const label = state.syncStatus === "on" ? "Synced" : state.syncStatus === "connecting" ? "Connecting…" : state.syncStatus === "error" ? "Sync error" : "Set up sync";
     return (
       '<div class="header">' +
-        '<div><div class="eyebrow">DESK LOG</div><div class="h1">Trading Journal</div></div>' +
+        '<div><div class="eyebrow">DESK LOG</div><div class="h1">Trading Journal</div>' +
+          '<button class="sync-btn" data-action="open-sync-modal"><span class="sync-dot ' + dotClass + '"></span>' + label + '</button>' +
+        '</div>' +
         '<div style="text-align:right;">' +
           '<div class="eyebrow">TOTAL P&amp;L</div>' +
           '<div class="big-number" style="color:' + (positive ? "var(--win)" : "var(--loss)") + '">' + fmtMoney(stats.total) + '</div>' +
@@ -474,6 +480,35 @@
     );
   }
 
+  function renderSyncModal() {
+    if (!state.showSyncModal) return "";
+    const sd = state.syncDraft;
+    const connected = state.sync && state.syncStatus === "on";
+    return (
+      '<div class="modal-overlay" data-action="close-sync-modal-backdrop">' +
+        '<div class="modal-sheet" onclick="event.stopPropagation()">' +
+          '<div class="modal-title">Sync across devices</div>' +
+          '<div class="modal-sub">Paste your Supabase Project URL and anon key (Settings → API in your Supabase project), then use the same Sync Code on every device you want linked.</div>' +
+          '<div class="field"><div class="field-label">Supabase Project URL</div><input id="sy-url" value="' + escapeHtml(sd.url) + '" placeholder="https://xxxx.supabase.co"></div>' +
+          '<div class="field"><div class="field-label">Supabase anon public key</div><input id="sy-key" value="' + escapeHtml(sd.anonKey) + '" placeholder="eyJhbGciOi..."></div>' +
+          '<div class="field"><div class="field-label">Sync code (same on every device)</div>' +
+            '<div class="code-box">' +
+              '<input id="sy-code" value="' + escapeHtml(sd.syncCode) + '" placeholder="tap generate, or paste from your other device">' +
+              '<button type="button" class="tiny-btn" data-action="gen-sync-code">Generate</button>' +
+            '</div>' +
+          '</div>' +
+          (sd.syncCode ? '<button type="button" class="tiny-btn" data-action="copy-sync-code" style="margin-bottom:12px;display:flex;align-items:center;gap:6px;width:fit-content;">' + ICON.copy + ' Copy code</button>' : "") +
+          (state.syncError ? '<div class="error-text">' + escapeHtml(state.syncError) + '</div>' : "") +
+          '<div style="display:flex;gap:10px;margin-top:8px;">' +
+            (connected ? '<button type="button" class="btn-secondary" data-action="disconnect-sync">Disconnect</button>' : '<button type="button" class="btn-secondary" data-action="close-sync-modal">Cancel</button>') +
+            '<button type="button" class="btn-primary" style="margin-bottom:0;" data-action="save-sync">' + (connected ? "Update" : "Connect") + '</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+
   function renderNav() {
     const items = [
       { key: "dashboard", label: "Dashboard", icon: ICON.trendUp },
@@ -500,9 +535,28 @@
       '<div class="body">' + bodyHtml + '</div>' +
       renderNav() +
       (state.toast ? '<div class="toast">' + escapeHtml(state.toast) + '</div>' : "") +
-      (state.lightbox ? '<div class="lightbox-overlay" data-action="close-lightbox"><button class="lightbox-close" data-action="close-lightbox">' + ICON.x + '</button><img class="lightbox-img" src="' + state.lightbox + '"></div>' : "");
+      (state.lightbox ? '<div class="lightbox-overlay" data-action="close-lightbox"><button class="lightbox-close" data-action="close-lightbox">' + ICON.x + '</button><img class="lightbox-img" src="' + state.lightbox + '"></div>' : "") +
+      renderSyncModal();
 
     wireFormEvents();
+    wireSyncModalEvents();
+  }
+
+  function wireSyncModalEvents() {
+    if (!state.showSyncModal) return;
+    const map = { "sy-url": "url", "sy-key": "anonKey", "sy-code": "syncCode" };
+    Object.keys(map).forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const key = map[id];
+      el.addEventListener("input", () => { state.syncDraft[key] = el.value; });
+      if (document.activeElement && document.activeElement.id === id) {
+        el.focus();
+        const val = el.value;
+        el.value = val;
+        try { el.setSelectionRange(val.length, val.length); } catch (e) {}
+      }
+    });
   }
 
   // ---------- form field wiring (since we re-render via innerHTML) ----------
@@ -606,6 +660,102 @@
   }
 
   // ---------- actions ----------
+  function connectSync(cfg, opts) {
+    opts = opts || {};
+    if (!cfg || !cfg.url || !cfg.anonKey || !cfg.syncCode) return;
+    if (typeof supabase === "undefined" || !supabase.createClient) {
+      setState({ syncStatus: "error", syncError: "Sync library failed to load — check your internet connection and reload." });
+      return;
+    }
+    try {
+      supaClient = supabase.createClient(cfg.url, cfg.anonKey);
+    } catch (e) {
+      setState({ syncStatus: "error", syncError: "Couldn't connect — check the URL and key." });
+      return;
+    }
+    state.sync = cfg;
+    saveSyncConfig(cfg);
+    state.syncStatus = "connecting";
+    if (!opts.silent) render();
+
+    pullRemote()
+      .then(() => {
+        state.syncStatus = "on";
+        state.syncError = "";
+        subscribeRealtime();
+        render();
+      })
+      .catch((err) => {
+        state.syncStatus = "error";
+        state.syncError = "Couldn't reach Supabase. Check the table was created and the URL/key are correct.";
+        render();
+      });
+  }
+
+  function disconnectSync() {
+    if (realtimeChannel) {
+      try { supaClient.removeChannel(realtimeChannel); } catch (e) {}
+      realtimeChannel = null;
+    }
+    supaClient = null;
+    clearSyncConfig();
+    setState({ sync: null, syncStatus: "off", showSyncModal: false, syncDraft: { url: "", anonKey: "", syncCode: "" } });
+  }
+
+  function pullRemote() {
+    if (!supaClient || !state.sync) return Promise.reject(new Error("not connected"));
+    return supaClient
+      .from("entries")
+      .select("*")
+      .eq("journal_key", state.sync.syncCode)
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) throw error;
+        state.entries = (data || []).map(rowToEntry);
+        saveEntries(state.entries);
+      });
+  }
+
+  function pushEntryRemote(entry) {
+    if (!supaClient || !state.sync || state.syncStatus !== "on") return;
+    supaClient
+      .from("entries")
+      .upsert(entryToRow(entry, state.sync.syncCode))
+      .then(({ error }) => {
+        if (error) showToast("Saved locally — sync failed");
+      });
+  }
+
+  function deleteEntryRemote(id) {
+    if (!supaClient || !state.sync || state.syncStatus !== "on") return;
+    supaClient
+      .from("entries")
+      .delete()
+      .eq("id", id)
+      .eq("journal_key", state.sync.syncCode)
+      .then(({ error }) => {
+        if (error) showToast("Deleted locally — sync failed");
+      });
+  }
+
+  function subscribeRealtime() {
+    if (!supaClient || !state.sync) return;
+    if (realtimeChannel) {
+      try { supaClient.removeChannel(realtimeChannel); } catch (e) {}
+    }
+    realtimeChannel = supaClient
+      .channel("entries-" + state.sync.syncCode)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "entries", filter: "journal_key=eq." + state.sync.syncCode },
+        () => {
+          // Any change from either device — just re-pull for simplicity/correctness.
+          pullRemote().then(render).catch(() => {});
+        }
+      )
+      .subscribe();
+  }
+
   function saveEntryFromDraft() {
     const d = state.draft;
     if (!d.symbol.trim()) return setState({ formError: "Add a symbol, like EURUSD." });
@@ -626,6 +776,7 @@
     state.view = "dashboard";
     showToast("Trade logged");
     render();
+    pushEntryRemote(entry);
   }
 
   let toastTimer;
@@ -640,6 +791,7 @@
     state.entries = state.entries.filter((e) => e.id !== id);
     saveEntries(state.entries);
     render();
+    deleteEntryRemote(id);
   }
 
   function exportJson() {
@@ -661,10 +813,13 @@
         const incoming = JSON.parse(reader.result);
         if (!Array.isArray(incoming)) throw new Error("bad format");
         const existingIds = new Set(state.entries.map((e) => e.id));
-        const merged = state.entries.concat(incoming.filter((e) => e && e.id && !existingIds.has(e.id)));
+        const newOnes = incoming.filter((e) => e && e.id && !existingIds.has(e.id));
+        const merged = state.entries.concat(newOnes);
         state.entries = merged;
         saveEntries(state.entries);
         showToast("Imported " + incoming.length + " entries");
+        render();
+        if (state.syncStatus === "on") newOnes.forEach(pushEntryRemote);
       } catch (e) {
         showToast("Couldn't read that file");
       }
@@ -725,6 +880,41 @@
       case "close-lightbox": setState({ lightbox: null }); break;
       case "export-json": exportJson(); break;
       case "import-json": document.getElementById("importFile").click(); break;
+      case "open-sync-modal":
+        setState({
+          showSyncModal: true,
+          syncDraft: state.sync ? Object.assign({}, state.sync) : { url: "", anonKey: "", syncCode: "" },
+          syncError: "",
+        });
+        break;
+      case "close-sync-modal":
+      case "close-sync-modal-backdrop":
+        setState({ showSyncModal: false, syncError: "" });
+        break;
+      case "gen-sync-code":
+        state.syncDraft.syncCode = genSyncCode();
+        render();
+        break;
+      case "copy-sync-code":
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(state.syncDraft.syncCode).then(() => showToast("Code copied"));
+        }
+        break;
+      case "save-sync": {
+        const cfg = {
+          url: (state.syncDraft.url || "").trim().replace(/\/+$/, ""),
+          anonKey: (state.syncDraft.anonKey || "").trim(),
+          syncCode: (state.syncDraft.syncCode || "").trim(),
+        };
+        if (!cfg.url || !cfg.anonKey || !cfg.syncCode) {
+          setState({ syncError: "Fill in the URL, key, and sync code." });
+          break;
+        }
+        setState({ showSyncModal: false, syncError: "" });
+        connectSync(cfg);
+        break;
+      }
+      case "disconnect-sync": disconnectSync(); break;
     }
   });
 
@@ -742,6 +932,10 @@
   }
 
   render();
+
+  if (state.sync) {
+    connectSync(state.sync, { silent: true });
+  }
 })();
 </script>
 </body>
