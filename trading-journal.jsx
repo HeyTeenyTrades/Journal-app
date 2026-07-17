@@ -621,7 +621,7 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
       </div>
 
       <div style={{ ...styles.weekRow, gridTemplateColumns: "repeat(7, 1fr) 46px" }}>
-        {["S", "M", "T", "W", "T", "F", "S", "P&L"].map((d, i) => (
+        {["S", "M", "T", "W", "T", "F", "S", "W PNL"].map((d, i) => (
           <div key={i} style={styles.weekDay}>{d}</div>
         ))}
       </div>
@@ -639,7 +639,6 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
             if (list.length) weekHas = true;
             weekTotal += list.reduce((s, e) => s + Number(e.pnl || 0), 0);
           });
-          const weekNum = Math.floor(i / 7) + 1;
           const pnlColor = weekTotal >= 0 ? "#46C2A6" : "#F16063";
           weeks.push(
             <div key={i} style={{ marginBottom: 6 }}>
@@ -689,9 +688,10 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
                       fontSize: 10,
                       fontWeight: 700,
                       fontFamily: "ui-monospace, monospace",
-                      background: weekTotal >= 0 ? "rgba(70,194,166,0.08)" : "rgba(241,96,99,0.08)",
+                      background: weekTotal >= 0 ? "rgba(70,194,166,0.85)" : "rgba(241,96,99,0.85)",
                       border: `1px solid ${pnlColor}`,
-                      color: pnlColor,
+                      color: "#fff",
+                      textShadow: "0 1px 2px rgba(0,0,0,0.3)",
                       minHeight: 0,
                       lineHeight: 1.2,
                       padding: "0 2px",
@@ -707,7 +707,7 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
                       fontSize: 9,
                       fontWeight: 700,
                       fontFamily: "ui-monospace, monospace",
-                      background: "#0E141B",
+                      background: "#1A2129",
                       border: "1px solid #1A2129",
                       color: "#5C6975",
                       minHeight: 0,

@@ -122,14 +122,26 @@
     font-size: 9px;
     font-weight: 700;
     font-family: ui-monospace, monospace;
-    background: var(--surface2);
+    background: #1A2129;
     border: 1px solid var(--border);
     min-height: 0;
     line-height: 1.2;
     padding: 0 2px;
     word-break: break-all;
+    color: #5C6975;
   }
-  .cal-cell-pl.has-value { font-size: 10px; }
+  .cal-cell-pl.win {
+    background: rgba(70,194,166,0.85);
+    border-color: #46C2A6;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .cal-cell-pl.loss {
+    background: rgba(241,96,99,0.85);
+    border-color: #F16063;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
   .cal-cell { aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: transparent; border: 1px solid transparent; cursor: default; overflow: hidden; min-height: 44px; }
   .cal-cell.has { cursor: pointer; }
   .cal-cell .d { font-size: 12px; color: var(--muted); }
@@ -497,11 +509,10 @@
         weekTotal += list.reduce((s, e) => s + Number(e.pnl || 0), 0);
       });
       const cellsHtml = weekCells.map(renderCell).join("");
-      const weekNum = Math.floor(i / 7) + 1;
-      const pnlColor = weekTotal >= 0 ? "var(--win)" : "var(--loss)";
+      const pnlClass = weekTotal >= 0 ? "win" : "loss";
       const pnlCell = weekHas
-        ? '<div class="cal-cell-pl has-value" style="color:' + pnlColor + ';background:' + (weekTotal >= 0 ? 'rgba(70,194,166,0.08)' : 'rgba(241,96,99,0.08)') + ';border-color:' + pnlColor + '">' + fmtMoney(weekTotal) + '</div>'
-        : '<div class="cal-cell-pl" style="color:var(--muted2)">—</div>';
+        ? '<div class="cal-cell-pl ' + pnlClass + '">' + fmtMoney(weekTotal) + '</div>'
+        : '<div class="cal-cell-pl">—</div>';
       weeksHtml +=
         '<div class="cal-week">' +
           '<div class="cal-grid">' + cellsHtml + pnlCell + '</div>' +
@@ -522,7 +533,7 @@
         '<div style="color:' + (monthTotal >= 0 ? "var(--win)" : "var(--loss)") + ';font-weight:700;font-family:ui-monospace,monospace;">' + fmtMoney(monthTotal) + '</div></div>' +
         '<button class="icon-btn" data-action="cal-next">' + ICON.right + '</button>' +
       '</div>' +
-      '<div class="week-row">' + ["S", "M", "T", "W", "T", "F", "S", "P&L"].map((d) => '<div class="week-day">' + d + '</div>').join("") + '</div>' +
+      '<div class="week-row">' + ["S", "M", "T", "W", "T", "F", "S", "W PNL"].map((d) => '<div class="week-day">' + d + '</div>').join("") + '</div>' +
       weeksHtml +
       drilldown
     );
