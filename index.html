@@ -109,9 +109,9 @@
   .thumb-btn { background: transparent; border: 1px solid var(--border2); border-radius: 8px; padding: 0; cursor: pointer; flex-shrink: 0; width: 44px; height: 44px; overflow: hidden; }
   .thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-  .week-row { display: grid; grid-template-columns: repeat(8,1fr); margin-bottom: 6px; }
+  .week-row { display: grid; grid-template-columns: repeat(7, 1fr) 64px; margin-bottom: 6px; }
   .week-day { text-align: center; font-size: 10px; color: var(--muted2); font-weight: 700; }
-  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr) 46px; gap: 3px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr) 64px; gap: 3px; }
   .cal-week { margin-bottom: 6px; }
   .cal-cell-pl {
     display: flex;
@@ -119,15 +119,16 @@
     align-items: center;
     justify-content: center;
     border-radius: 8px;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
     font-family: ui-monospace, monospace;
     background: #1A2129;
     border: 1px solid var(--border);
     min-height: 0;
-    line-height: 1.2;
+    line-height: 1.1;
     padding: 0 2px;
-    word-break: break-all;
+    white-space: nowrap;
+    overflow: hidden;
     color: #5C6975;
   }
   .cal-cell-pl.win {
@@ -500,6 +501,8 @@
     let weeksHtml = "";
     for (let i = 0; i < cells.length; i += 7) {
       const weekCells = cells.slice(i, i + 7);
+      // Pad to exactly 7 cells so the P&L always stays in the 8th grid column
+      while (weekCells.length < 7) weekCells.push(null);
       let weekTotal = 0;
       let weekHas = false;
       weekCells.forEach((d) => {

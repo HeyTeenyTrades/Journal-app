@@ -620,7 +620,7 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
         </button>
       </div>
 
-      <div style={{ ...styles.weekRow, gridTemplateColumns: "repeat(7, 1fr) 46px" }}>
+      <div style={{ ...styles.weekRow, gridTemplateColumns: "repeat(7, 1fr) 64px" }}>
         {["S", "M", "T", "W", "T", "F", "S", "W PNL"].map((d, i) => (
           <div key={i} style={styles.weekDay}>{d}</div>
         ))}
@@ -631,6 +631,8 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
         const weeks = [];
         for (let i = 0; i < cells.length; i += 7) {
           const weekCells = cells.slice(i, i + 7);
+          // Pad to exactly 7 cells so the P&L always stays in the 8th grid column
+          while (weekCells.length < 7) weekCells.push(null);
           let weekTotal = 0;
           let weekHas = false;
           weekCells.forEach((d) => {
@@ -642,7 +644,7 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
           const pnlColor = weekTotal >= 0 ? "#46C2A6" : "#F16063";
           weeks.push(
             <div key={i} style={{ marginBottom: 6 }}>
-              <div style={{ ...styles.calGrid, gridTemplateColumns: "repeat(7, 1fr) 46px" }}>
+              <div style={{ ...styles.calGrid, gridTemplateColumns: "repeat(7, 1fr) 64px" }}>
                 {weekCells.map((d, ci) => {
                   if (d === null) return <div key={ci} />;
                   const key = dateKey(d);
@@ -693,8 +695,10 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
                       color: "#fff",
                       textShadow: "0 1px 2px rgba(0,0,0,0.3)",
                       minHeight: 0,
-                      lineHeight: 1.2,
+                      lineHeight: 1.1,
                       padding: "0 2px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
                     }}>
                       {fmtMoney(weekTotal)}
                     </div>
@@ -706,11 +710,13 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
                       borderRadius: 8,
                       fontSize: 9,
                       fontWeight: 700,
-                      fontFamily: "ui-monospace, monospace",
-                      background: "#1A2129",
-                      border: "1px solid #1A2129",
-                      color: "#5C6975",
-                      minHeight: 0,
+                    fontFamily: "ui-monospace, monospace",
+                    background: "#1A2129",
+                    border: "1px solid #1A2129",
+                    color: "#5C6975",
+                    minHeight: 0,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
                     }}>
                       —
                     </div>
