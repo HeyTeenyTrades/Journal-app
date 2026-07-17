@@ -640,10 +640,12 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
             weekTotal += list.reduce((s, e) => s + Number(e.pnl || 0), 0);
           });
           const weekNum = Math.floor(i / 7) + 1;
+          const pnlColor = weekTotal >= 0 ? "#46C2A6" : "#F16063";
           weeks.push(
             <div key={i} style={{ marginBottom: 6 }}>
-              <div style={styles.calGrid}>
-                {weekCells.map((d, ci) => {
+              <div style={{ display: "flex", alignItems: "stretch", gap: 6 }}>
+                <div style={{ ...styles.calGrid, flex: 1 }}>
+                  {weekCells.map((d, ci) => {
                   if (d === null) return <div key={ci} />;
                   const key = dateKey(d);
                   const list = byDay[key] || [];
@@ -679,28 +681,25 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
                   );
                 })}
               </div>
-              {weekHas && (
-                <div style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "6px 8px 4px",
-                  marginBottom: 2,
-                  fontSize: 11,
-                  letterSpacing: 0.5,
-                  color: "#5C6975",
-                  fontWeight: 700,
-                  fontFamily: "ui-monospace, monospace",
-                  background: "#0E141B",
-                  borderRadius: 6,
-                  borderBottom: "1px solid #1A2129",
-                }}>
-                  <span style={{ color: "#5C6975", letterSpacing: 1 }}>WEEK {weekNum}</span>
-                  <span style={{ color: weekTotal >= 0 ? "#46C2A6" : "#F16063", fontSize: 12 }}>
-                    {fmtMoney(weekTotal)}
-                  </span>
-                </div>
-              )}
+              <div style={{
+                width: 58,
+                flexShrink: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 8,
+                fontSize: weekHas ? 11 : 10,
+                fontWeight: 700,
+                fontFamily: "ui-monospace, monospace",
+                background: "#0E141B",
+                border: "1px solid #1A2129",
+                borderLeft: weekHas ? `3px solid ${pnlColor}` : "1px solid #1A2129",
+                color: weekHas ? pnlColor : "#5C6975",
+              }}>
+                {weekHas ? fmtMoney(weekTotal) : "—"}
+              </div>
+              </div>
             </div>
           );
         }
