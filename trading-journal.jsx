@@ -620,8 +620,8 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
         </button>
       </div>
 
-      <div style={styles.weekRow}>
-        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+      <div style={{ ...styles.weekRow, gridTemplateColumns: "repeat(7, 1fr) 46px" }}>
+        {["S", "M", "T", "W", "T", "F", "S", "P&L"].map((d, i) => (
           <div key={i} style={styles.weekDay}>{d}</div>
         ))}
       </div>
@@ -643,9 +643,8 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
           const pnlColor = weekTotal >= 0 ? "#46C2A6" : "#F16063";
           weeks.push(
             <div key={i} style={{ marginBottom: 6 }}>
-              <div style={{ display: "flex", alignItems: "stretch", gap: 6 }}>
-                <div style={{ ...styles.calGrid, flex: 1 }}>
-                  {weekCells.map((d, ci) => {
+              <div style={{ ...styles.calGrid, gridTemplateColumns: "repeat(7, 1fr) 46px" }}>
+                {weekCells.map((d, ci) => {
                   if (d === null) return <div key={ci} />;
                   const key = dateKey(d);
                   const list = byDay[key] || [];
@@ -680,25 +679,42 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
                     </button>
                   );
                 })}
-              </div>
-              <div style={{
-                width: 58,
-                flexShrink: 0,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 8,
-                fontSize: weekHas ? 11 : 10,
-                fontWeight: 700,
-                fontFamily: "ui-monospace, monospace",
-                background: "#0E141B",
-                border: "1px solid #1A2129",
-                borderLeft: weekHas ? `3px solid ${pnlColor}` : "1px solid #1A2129",
-                color: weekHas ? pnlColor : "#5C6975",
-              }}>
-                {weekHas ? fmtMoney(weekTotal) : "—"}
-              </div>
+                {weekHas
+                  ? <div style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: 8,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      fontFamily: "ui-monospace, monospace",
+                      background: weekTotal >= 0 ? "rgba(70,194,166,0.08)" : "rgba(241,96,99,0.08)",
+                      border: `1px solid ${pnlColor}`,
+                      color: pnlColor,
+                      minHeight: 0,
+                      lineHeight: 1.2,
+                      padding: "0 2px",
+                    }}>
+                      {fmtMoney(weekTotal)}
+                    </div>
+                  : <div style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: 8,
+                      fontSize: 9,
+                      fontWeight: 700,
+                      fontFamily: "ui-monospace, monospace",
+                      background: "#0E141B",
+                      border: "1px solid #1A2129",
+                      color: "#5C6975",
+                      minHeight: 0,
+                    }}>
+                      —
+                    </div>
+                }
               </div>
             </div>
           );

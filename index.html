@@ -109,27 +109,27 @@
   .thumb-btn { background: transparent; border: 1px solid var(--border2); border-radius: 8px; padding: 0; cursor: pointer; flex-shrink: 0; width: 44px; height: 44px; overflow: hidden; }
   .thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-  .week-row { display: grid; grid-template-columns: repeat(7,1fr); margin-bottom: 6px; }
+  .week-row { display: grid; grid-template-columns: repeat(8,1fr); margin-bottom: 6px; }
   .week-day { text-align: center; font-size: 10px; color: var(--muted2); font-weight: 700; }
-  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; flex: 1; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr) 46px; gap: 3px; }
   .cal-week { margin-bottom: 6px; }
-  .week-row-layout { display: flex; align-items: stretch; gap: 6px; }
-  .week-pnl-right {
-    width: 58px;
-    flex-shrink: 0;
+  .cal-cell-pl {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     border-radius: 8px;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     font-family: ui-monospace, monospace;
     background: var(--surface2);
     border: 1px solid var(--border);
-    color: var(--muted2);
+    min-height: 0;
+    line-height: 1.2;
+    padding: 0 2px;
+    word-break: break-all;
   }
-  .week-pnl-right.has-value { font-size: 11px; }
+  .cal-cell-pl.has-value { font-size: 10px; }
   .cal-cell { aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: transparent; border: 1px solid transparent; cursor: default; overflow: hidden; min-height: 44px; }
   .cal-cell.has { cursor: pointer; }
   .cal-cell .d { font-size: 12px; color: var(--muted); }
@@ -499,15 +499,12 @@
       const cellsHtml = weekCells.map(renderCell).join("");
       const weekNum = Math.floor(i / 7) + 1;
       const pnlColor = weekTotal >= 0 ? "var(--win)" : "var(--loss)";
-      const pnlHtml = weekHas
-        ? '<div class="week-pnl-right has-value" style="border-left:3px solid ' + pnlColor + ';color:' + pnlColor + '">' + fmtMoney(weekTotal) + '</div>'
-        : '<div class="week-pnl-right">—</div>';
+      const pnlCell = weekHas
+        ? '<div class="cal-cell-pl has-value" style="color:' + pnlColor + ';background:' + (weekTotal >= 0 ? 'rgba(70,194,166,0.08)' : 'rgba(241,96,99,0.08)') + ';border-color:' + pnlColor + '">' + fmtMoney(weekTotal) + '</div>'
+        : '<div class="cal-cell-pl" style="color:var(--muted2)">—</div>';
       weeksHtml +=
         '<div class="cal-week">' +
-          '<div class="week-row-layout">' +
-            '<div class="cal-grid">' + cellsHtml + '</div>' +
-            pnlHtml +
-          '</div>' +
+          '<div class="cal-grid">' + cellsHtml + pnlCell + '</div>' +
         '</div>';
     }
 
@@ -525,7 +522,7 @@
         '<div style="color:' + (monthTotal >= 0 ? "var(--win)" : "var(--loss)") + ';font-weight:700;font-family:ui-monospace,monospace;">' + fmtMoney(monthTotal) + '</div></div>' +
         '<button class="icon-btn" data-action="cal-next">' + ICON.right + '</button>' +
       '</div>' +
-      '<div class="week-row">' + ["S", "M", "T", "W", "T", "F", "S"].map((d) => '<div class="week-day">' + d + '</div>').join("") + '</div>' +
+      '<div class="week-row">' + ["S", "M", "T", "W", "T", "F", "S", "P&L"].map((d) => '<div class="week-day">' + d + '</div>').join("") + '</div>' +
       weeksHtml +
       drilldown
     );
