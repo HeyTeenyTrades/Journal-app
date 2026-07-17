@@ -641,7 +641,7 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
             if (list.length) weekHas = true;
             weekTotal += list.reduce((s, e) => s + Number(e.pnl || 0), 0);
           });
-          const pnlColor = weekTotal >= 0 ? "#46C2A6" : "#F16063";
+          const pnlColor = weekTotal >= 0 ? "#2E6A5C" : "#6A3234";
           weeks.push(
             <div key={i} style={{ marginBottom: 6 }}>
               <div style={{ ...styles.calGrid, gridTemplateColumns: "repeat(7, 1fr) 46px" }}>
