@@ -620,7 +620,7 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
         </button>
       </div>
 
-      <div style={{ ...styles.weekRow, gridTemplateColumns: "repeat(7, 1fr) 64px" }}>
+      <div style={{ ...styles.weekRow, gridTemplateColumns: "repeat(7, 1fr) 46px" }}>
         {["S", "M", "T", "W", "T", "F", "S", "W PNL"].map((d, i) => (
           <div key={i} style={styles.weekDay}>{d}</div>
         ))}
@@ -644,7 +644,7 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
           const pnlColor = weekTotal >= 0 ? "#46C2A6" : "#F16063";
           weeks.push(
             <div key={i} style={{ marginBottom: 6 }}>
-              <div style={{ ...styles.calGrid, gridTemplateColumns: "repeat(7, 1fr) 64px" }}>
+              <div style={{ ...styles.calGrid, gridTemplateColumns: "repeat(7, 1fr) 46px" }}>
                 {weekCells.map((d, ci) => {
                   if (d === null) return <div key={ci} />;
                   const key = dateKey(d);
@@ -695,10 +695,8 @@ function PnlCalendar({ month, setMonth, byDay, selectedDay, setSelectedDay, onIm
                       color: "#fff",
                       textShadow: "0 1px 2px rgba(0,0,0,0.3)",
                       minHeight: 0,
-                      lineHeight: 1.1,
+                      lineHeight: 1.2,
                       padding: "0 2px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
                     }}>
                       {fmtMoney(weekTotal)}
                     </div>
