@@ -486,7 +486,7 @@
     const connected = state.sync && state.syncStatus === "on";
     return (
       '<div class="modal-overlay" data-action="close-sync-modal-backdrop">' +
-        '<div class="modal-sheet" onclick="event.stopPropagation()">' +
+        '<div class="modal-sheet" data-action="noop-sync-sheet">' +
           '<div class="modal-title">Sync across devices</div>' +
           '<div class="modal-sub">Paste your Supabase Project URL and anon key (Settings → API in your Supabase project), then use the same Sync Code on every device you want linked.</div>' +
           '<div class="field"><div class="field-label">Supabase Project URL</div><input id="sy-url" value="' + escapeHtml(sd.url) + '" placeholder="https://xxxx.supabase.co"></div>' +
@@ -890,6 +890,8 @@
       case "close-sync-modal":
       case "close-sync-modal-backdrop":
         setState({ showSyncModal: false, syncError: "" });
+        break;
+      case "noop-sync-sheet":
         break;
       case "gen-sync-code":
         state.syncDraft.syncCode = genSyncCode();
