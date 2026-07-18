@@ -12,6 +12,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <link rel="icon" href="icon-192.png" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
   :root {
     --bg: #0B0F14;
@@ -103,6 +104,9 @@
   .tag-raw-input { flex: 1; min-width: 90px; background: transparent !important; border: none !important; color: var(--text); font-size: 14px; padding: 4px 2px; outline: none; }
   .hint-text { font-size: 11px; color: var(--muted2); margin-top: 4px; }
   .upload-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: var(--surface); border: 1px dashed #2E3A45; border-radius: 10px; padding: 14px 12px; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .upload-btn.scanning { border-color: var(--accent); color: var(--accent); }
+  .scan-block { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .scan-result { font-size: 11px; color: var(--win); margin-top: 8px; line-height: 1.4; }
   .image-preview-wrap { position: relative; border-radius: 10px; overflow: hidden; border: 1px solid var(--border2); }
   .image-preview { width: 100%; max-height: 220px; object-fit: cover; display: block; }
   .remove-image-btn { position: absolute; top: 8px; right: 8px; background: rgba(11,15,20,0.85); border: 1px solid var(--border2); border-radius: 50%; color: var(--text); width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -142,12 +146,19 @@
   }
   .cal-cell { min-height: 56px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; background: transparent; border: 1px solid transparent; cursor: default; overflow: hidden; padding: 4px 2px; }
   .cal-cell-pad { min-height: 56px; border-radius: 8px; border: 1px solid var(--border2); }
+  .equity-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 4px; }
+  .breakdown-block { margin-top: 18px; }
+  .breakdown-row { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .breakdown-row-top { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .breakdown-bar-track { height: 5px; border-radius: 4px; background: var(--border2); overflow: hidden; }
+  .breakdown-bar-fill { height: 100%; border-radius: 4px; }
+  .breakdown-row-sub { font-size: 11px; color: var(--muted2); margin-top: 5px; }
   .cal-cell.has { cursor: pointer; }
   .cal-cell .d { font-size: 12px; color: var(--muted); }
   .cal-cell .amt { font-size: 10px; font-family: ui-monospace, monospace; font-weight: 700; }
   .trades-ct { font-size: 7px; color: var(--muted2); letter-spacing: 0.2px; }
   .nav-bar { display: flex; justify-content: space-around; border-top: 1px solid var(--border); padding: 8px 4px calc(12px + env(safe-area-inset-bottom)); background: var(--surface2); }
-  .nav-item { background: transparent; border: none; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 6px 10px; color: var(--muted); }
+  .nav-item { background: transparent; border: none; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 6px 4px; color: var(--muted); flex: 1; }
   .nav-item.active { color: var(--accent); }
   .toast { position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%); background: #1A2129; border: 1px solid var(--accent); color: var(--text); padding: 8px 14px; border-radius: 20px; font-size: 12px; z-index: 60; }
   .lightbox-overlay { position: fixed; inset: 0; background: rgba(6,8,11,0.92); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
@@ -291,6 +302,7 @@
     x: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
     cloud: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>',
     copy: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>',
+    bars: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>',
   };
 
   // ---------- derived ----------
@@ -313,6 +325,58 @@
       (map[e.date] = map[e.date] || []).push(e);
     });
     return map;
+  }
+
+  function chronoSort(entries) {
+    return entries.slice().sort((a, b) => {
+      const ak = (a.date || "") + " " + (a.time || "00:00");
+      const bk = (b.date || "") + " " + (b.time || "00:00");
+      return ak.localeCompare(bk);
+    });
+  }
+
+  function computeEquityAndDrawdown(entries) {
+    const sorted = chronoSort(entries);
+    let cumulative = 0, peak = 0, maxDrawdown = 0;
+    const curve = [];
+    sorted.forEach((e) => {
+      cumulative += Number(e.pnl) || 0;
+      curve.push(cumulative);
+      if (cumulative > peak) peak = cumulative;
+      const dd = peak - cumulative;
+      if (dd > maxDrawdown) maxDrawdown = dd;
+    });
+    // Current streak, counting back from the most recent trade
+    let streak = 0, streakType = null;
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      const pnl = Number(sorted[i].pnl) || 0;
+      const type = pnl > 0 ? "win" : pnl < 0 ? "loss" : null;
+      if (type === null) break;
+      if (streakType === null) { streakType = type; streak = 1; }
+      else if (type === streakType) streak++;
+      else break;
+    }
+    return { curve, maxDrawdown, streak, streakType };
+  }
+
+  function computeProfitFactor(entries) {
+    const grossWin = entries.filter((e) => Number(e.pnl) > 0).reduce((s, e) => s + Number(e.pnl), 0);
+    const grossLoss = Math.abs(entries.filter((e) => Number(e.pnl) < 0).reduce((s, e) => s + Number(e.pnl), 0));
+    if (grossLoss === 0) return grossWin > 0 ? Infinity : 0;
+    return grossWin / grossLoss;
+  }
+
+  function groupSum(items, keyFn) {
+    const map = {};
+    items.forEach((item) => {
+      const k = keyFn(item) || "—";
+      if (!map[k]) map[k] = { total: 0, count: 0 };
+      map[k].total += Number(item.pnl) || 0;
+      map[k].count += 1;
+    });
+    return Object.entries(map)
+      .map(([key, v]) => ({ key, total: v.total, count: v.count }))
+      .sort((a, b) => b.total - a.total);
   }
 
   // ---------- render pieces ----------
@@ -408,6 +472,14 @@
     return (
       '<div class="section-label"><span>NEW ENTRY</span>' +
         (hasContent ? '<button class="discard-btn" data-action="discard-draft">Discard draft</button>' : '') +
+      '</div>' +
+      '<div class="scan-block">' +
+        '<div class="field-label">Scan a screenshot to auto-fill (optional)</div>' +
+        '<label class="upload-btn' + (state.scanBusy ? " scanning" : "") + '">' + ICON.image + " " + (state.scanBusy ? (state.scanMessage || "Scanning…") : "Scan chart screenshot") +
+          '<input type="file" accept="image/*" id="f-scan" style="display:none" ' + (state.scanBusy ? "disabled" : "") + '>' +
+        '</label>' +
+        (state.scanResultMsg ? '<div class="scan-result">' + escapeHtml(state.scanResultMsg) + '</div>' : "") +
+        '<div class="hint-text">Reads text off the image on your device — nothing is uploaded anywhere. Works best when entry/exit/P&amp;L/RR are printed clearly; always double-check before saving.</div>' +
       '</div>' +
       '<div class="field"><div class="field-label">Symbol</div>' +
         '<select id="f-symbol-select">' +
@@ -557,6 +629,88 @@
     );
   }
 
+  function renderEquityCurve(curve) {
+    if (curve.length < 2) {
+      return '<div class="empty">Log a couple more trades to see your equity curve.</div>';
+    }
+    const w = 400, h = 140, padX = 6, padY = 10;
+    const min = Math.min(0, ...curve);
+    const max = Math.max(0, ...curve);
+    const range = (max - min) || 1;
+    const stepX = (w - padX * 2) / (curve.length - 1);
+    const points = curve.map((v, i) => {
+      const x = padX + i * stepX;
+      const y = h - padY - ((v - min) / range) * (h - padY * 2);
+      return [x, y];
+    });
+    const pathD = points.map((p, i) => (i === 0 ? "M" : "L") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
+    const zeroY = h - padY - ((0 - min) / range) * (h - padY * 2);
+    const last = curve[curve.length - 1];
+    const color = last >= 0 ? "var(--win)" : "var(--loss)";
+    const lastPt = points[points.length - 1];
+    const firstPt = points[0];
+    const areaD = pathD + " L" + lastPt[0].toFixed(1) + "," + zeroY.toFixed(1) + " L" + firstPt[0].toFixed(1) + "," + zeroY.toFixed(1) + " Z";
+    return (
+      '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" style="width:100%;height:140px;display:block;">' +
+        '<line x1="' + padX + '" y1="' + zeroY.toFixed(1) + '" x2="' + (w - padX) + '" y2="' + zeroY.toFixed(1) + '" stroke="var(--border2)" stroke-width="1" stroke-dasharray="4,3" />' +
+        '<path d="' + areaD + '" fill="' + color + '" opacity="0.14" stroke="none" />' +
+        '<path d="' + pathD + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />' +
+      '</svg>'
+    );
+  }
+
+  function renderBreakdown(title, rows) {
+    if (!rows.length) return "";
+    const maxAbs = Math.max(1, ...rows.map((r) => Math.abs(r.total)));
+    return (
+      '<div class="breakdown-block">' +
+        '<div class="section-label"><span>' + title + '</span></div>' +
+        rows.map((r) => {
+          const pct = Math.min(100, (Math.abs(r.total) / maxAbs) * 100);
+          const up = r.total >= 0;
+          const color = up ? "var(--win)" : "var(--loss)";
+          return (
+            '<div class="breakdown-row">' +
+              '<div class="breakdown-row-top"><span>' + escapeHtml(r.key) + '</span><span style="color:' + color + ';font-family:ui-monospace,monospace;font-weight:600;">' + fmtMoney(r.total) + '</span></div>' +
+              '<div class="breakdown-bar-track"><div class="breakdown-bar-fill" style="width:' + pct + '%;background:' + color + ';"></div></div>' +
+              '<div class="breakdown-row-sub">' + r.count + (r.count === 1 ? " trade" : " trades") + '</div>' +
+            '</div>'
+          );
+        }).join("") +
+      '</div>'
+    );
+  }
+
+  function renderStats() {
+    const entries = state.entries;
+    if (!entries.length) {
+      return '<div class="empty">Log some trades to see analytics.</div>';
+    }
+    const { curve, maxDrawdown, streak, streakType } = computeEquityAndDrawdown(entries);
+    const pf = computeProfitFactor(entries);
+    const pfLabel = pf === Infinity ? "∞" : pf.toFixed(2);
+    const bySymbol = groupSum(entries, (e) => (e.symbol || "").toUpperCase());
+    const bySession = groupSum(entries, (e) => e.session);
+    const tagItems = [];
+    entries.forEach((e) => (e.tags || []).forEach((t) => tagItems.push({ pnl: e.pnl, _tag: t })));
+    const byTag = groupSum(tagItems, (e) => e._tag);
+    const streakLabel = streakType === "loss" ? "LOSS STREAK" : "WIN STREAK";
+    const streakColor = streakType === "loss" ? "var(--loss)" : "var(--win)";
+
+    return (
+      '<div class="section-label"><span>EQUITY CURVE</span></div>' +
+      '<div class="equity-card">' + renderEquityCurve(curve) + '</div>' +
+      '<div class="stat-grid" style="margin-top:14px;margin-bottom:18px;">' +
+        statCard("PROFIT FACTOR", pfLabel, ICON.gauge) +
+        statCard("MAX DRAWDOWN", fmtMoney(-maxDrawdown), ICON.trendDown, "var(--loss)") +
+        statCard(streakLabel, streak ? String(streak) : "—", ICON.target, streakColor) +
+      '</div>' +
+      renderBreakdown("BY SYMBOL", bySymbol) +
+      renderBreakdown("BY SESSION", bySession) +
+      renderBreakdown("BY TAG", byTag)
+    );
+  }
+
   function renderSyncModal() {
     if (!state.showSyncModal) return "";
     const sd = state.syncDraft;
@@ -591,6 +745,7 @@
       { key: "dashboard", label: "Dashboard", icon: ICON.trendUp },
       { key: "new", label: "New", icon: ICON.plus },
       { key: "calendar", label: "Calendar", icon: ICON.calendar },
+      { key: "stats", label: "Stats", icon: ICON.bars },
       { key: "history", label: "History", icon: ICON.list },
     ];
     return '<div class="nav-bar">' + items.map((it) =>
@@ -604,6 +759,7 @@
     if (state.view === "dashboard") bodyHtml = renderDashboard();
     else if (state.view === "new") bodyHtml = renderNewEntry();
     else if (state.view === "calendar") bodyHtml = renderCalendar();
+    else if (state.view === "stats") bodyHtml = renderStats();
     else bodyHtml = renderHistory();
 
     document.getElementById("app").innerHTML =
@@ -680,6 +836,11 @@
     const imageInput = document.getElementById("f-image");
     if (imageInput) {
       imageInput.addEventListener("change", handleImageFile);
+    }
+
+    const scanInput = document.getElementById("f-scan");
+    if (scanInput) {
+      scanInput.addEventListener("change", handleScanFile);
     }
 
     // Handle symbol select dropdown
@@ -765,6 +926,149 @@
       };
       reader.readAsDataURL(file);
     });
+  }
+
+  // ---------- screenshot OCR auto-fill ----------
+  function normalizeDate(raw) {
+    // ISO: 2026-07-13
+    let m = raw.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) return m[1] + "-" + m[2].padStart(2, "0") + "-" + m[3].padStart(2, "0");
+    // Slash formats: assume MM/DD/YYYY unless first part > 12 (then DD/MM/YYYY)
+    m = raw.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    if (m) {
+      let a = parseInt(m[1], 10), b = parseInt(m[2], 10), y = m[3];
+      if (y.length === 2) y = "20" + y;
+      let month = a, day = b;
+      if (a > 12) { month = b; day = a; }
+      return y + "-" + String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+    }
+    return null;
+  }
+
+  function normalizeTime(raw) {
+    let m = raw.match(/([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?\s*(AM|PM|am|pm)?/);
+    if (!m) return null;
+    let hour = parseInt(m[1], 10);
+    const min = m[2];
+    const ampm = m[3] ? m[3].toUpperCase() : null;
+    if (ampm === "PM" && hour < 12) hour += 12;
+    if (ampm === "AM" && hour === 12) hour = 0;
+    return String(hour).padStart(2, "0") + ":" + min;
+  }
+
+  function parseScreenshotText(text) {
+    const flat = text.replace(/\s+/g, " ");
+    const fields = {};
+    const found = [];
+
+    // Symbol: check known presets first, then a generic 6-letter FX-style pair
+    const symMatch = SYMBOLS.find((s) => new RegExp("\\b" + s + "\\b", "i").test(flat));
+    if (symMatch) {
+      fields.symbol = symMatch;
+      fields.symbolOther = false;
+      found.push("symbol");
+    } else {
+      const generic = flat.match(/\b([A-Z]{6}|XAU[A-Z]{3}|XAG[A-Z]{3})\b/);
+      if (generic) {
+        fields.symbol = generic[1].toUpperCase();
+        fields.symbolOther = true;
+        found.push("symbol");
+      }
+    }
+
+    // Direction
+    if (/\b(long|buy)\b/i.test(flat)) { fields.direction = "Long"; found.push("direction"); }
+    else if (/\b(short|sell)\b/i.test(flat)) { fields.direction = "Short"; found.push("direction"); }
+
+    // Session
+    const sessMatch = SESSIONS.find((s) => flat.toLowerCase().includes(s.toLowerCase()));
+    if (sessMatch) { fields.session = sessMatch; found.push("session"); }
+
+    // Date
+    const dateMatch = flat.match(/\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/);
+    if (dateMatch) {
+      const d = normalizeDate(dateMatch[0]);
+      if (d) { fields.date = d; found.push("date"); }
+    }
+
+    // Time
+    const timeMatch = flat.match(/\b([01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?\s*(?:AM|PM|am|pm)?\b/);
+    if (timeMatch) {
+      const t = normalizeTime(timeMatch[0]);
+      if (t) { fields.time = t; found.push("time"); }
+    }
+
+    // Entry / Exit price
+    const entryMatch = flat.match(/entry[^0-9\-]{0,12}(-?\d[\d,]*\.?\d*)/i);
+    if (entryMatch) { fields.entryPrice = entryMatch[1].replace(/,/g, ""); found.push("entry price"); }
+    const exitMatch = flat.match(/exit[^0-9\-]{0,12}(-?\d[\d,]*\.?\d*)/i);
+    if (exitMatch) { fields.exitPrice = exitMatch[1].replace(/,/g, ""); found.push("exit price"); }
+
+    // P&L
+    let pnlMatch = flat.match(/(?:net\s*p\s*&?\s*l|p\s*&?\s*l|pnl|profit\s*\/?\s*loss)[^0-9\-\+]{0,10}([+-]?\$?[\d,]+\.?\d*)/i);
+    if (!pnlMatch) pnlMatch = flat.match(/([+-]\$[\d,]+\.\d{2})/);
+    if (pnlMatch) {
+      const raw = pnlMatch[1].replace(/[$,]/g, "");
+      const num = parseFloat(raw);
+      if (!isNaN(num)) {
+        fields.pnl = String(Math.abs(num));
+        fields.pnlSign = num < 0 ? "loss" : "win";
+        found.push("P&L");
+      }
+    }
+
+    // RR
+    let rrMatch = flat.match(/\brr[^0-9]{0,6}1\s*:\s*(\d+(?:\.\d+)?)/i);
+    if (!rrMatch) rrMatch = flat.match(/\b1\s*:\s*(\d+(?:\.\d+)?)\b/);
+    if (!rrMatch) rrMatch = flat.match(/\brr[^0-9]{0,6}(\d+(?:\.\d+)?)/i);
+    if (rrMatch) { fields.rr = rrMatch[1]; found.push("RR"); }
+
+    return { fields, found };
+  }
+
+  function handleScanFile(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setState({ formError: "That file isn't an image." });
+      return;
+    }
+    if (typeof Tesseract === "undefined") {
+      setState({ formError: "The scanner library failed to load — check your internet connection and reload the page." });
+      return;
+    }
+    state.scanBusy = true;
+    state.scanMessage = "Reading screenshot…";
+    state.scanResultMsg = "";
+    state.formError = "";
+    render();
+
+    compressImage(file, 900, 0.85)
+      .then((ocrImg) => Tesseract.recognize(ocrImg, "eng"))
+      .then((result) => {
+        const text = (result && result.data && result.data.text) || "";
+        const { fields, found } = parseScreenshotText(text);
+        Object.keys(fields).forEach((k) => { state.draft[k] = fields[k]; });
+        return compressImage(file, 640, 0.6).then((displayImg) => {
+          state.draft.image = displayImg;
+          return found;
+        });
+      })
+      .then((found) => {
+        state.scanBusy = false;
+        state.scanMessage = "";
+        state.scanResultMsg = found.length
+          ? "Filled in from the screenshot: " + found.join(", ") + ". Double-check before saving."
+          : "Couldn't confidently read any fields from that image — fill them in manually.";
+        saveDraft(state.draft);
+        render();
+      })
+      .catch(() => {
+        state.scanBusy = false;
+        state.scanMessage = "";
+        setState({ formError: "Couldn't scan that image — try a clearer screenshot, or enter details manually." });
+      });
   }
 
   // ---------- actions ----------
@@ -947,6 +1251,7 @@
       case "go-dashboard": setState({ view: "dashboard", formError: "" }); break;
       case "go-new": setState({ view: "new", formError: "" }); break;
       case "go-calendar": setState({ view: "calendar" }); break;
+      case "go-stats": setState({ view: "stats" }); break;
       case "go-history": setState({ view: "history" }); break;
       case "save-entry": saveEntryFromDraft(); break;
       case "discard-draft":
