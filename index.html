@@ -108,6 +108,7 @@
   .remove-image-btn { position: absolute; top: 8px; right: 8px; background: rgba(11,15,20,0.85); border: 1px solid var(--border2); border-radius: 50%; color: var(--text); width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
   .thumb-btn { background: transparent; border: 1px solid var(--border2); border-radius: 8px; padding: 0; cursor: pointer; flex-shrink: 0; width: 44px; height: 44px; overflow: hidden; }
   .thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cal-monthly-pl { text-align: center; font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 14px; font-family: ui-monospace, monospace; }
   .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
   .week-row { display: grid; grid-template-columns: repeat(7, 1fr) 46px; margin-bottom: 6px; }
   .week-day { text-align: center; font-size: 10px; color: var(--muted2); font-weight: 700; }
@@ -119,32 +120,31 @@
     align-items: center;
     justify-content: center;
     border-radius: 8px;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
     font-family: ui-monospace, monospace;
-    background: #1A2129;
-    border: 1px solid var(--border);
+    background: transparent;
+    border: 1px solid transparent;
     min-height: 0;
     line-height: 1.2;
     padding: 0 2px;
     color: #5C6975;
   }
    .cal-cell-pl.win {
-    background: rgba(70,194,166,0.85);
-    border-color: #46C2A6;
-    color: #fff;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    background: rgba(70,194,166,0.14);
+    border-color: #2E6A5C;
+    color: var(--win);
   }
   .cal-cell-pl.loss {
-    background: rgba(241,96,99,0.85);
-    border-color: #F16063;
-    color: #fff;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    background: rgba(241,96,99,0.14);
+    border-color: #6A3234;
+    color: var(--loss);
   }
-  .cal-cell { aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: transparent; border: 1px solid transparent; cursor: default; overflow: hidden; min-height: 44px; }
+  .cal-cell { min-height: 56px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; background: transparent; border: 1px solid transparent; cursor: default; overflow: hidden; padding: 4px 2px; }
   .cal-cell.has { cursor: pointer; }
   .cal-cell .d { font-size: 12px; color: var(--muted); }
   .cal-cell .amt { font-size: 10px; font-family: ui-monospace, monospace; font-weight: 700; }
+  .trades-ct { font-size: 7px; color: var(--muted2); letter-spacing: 0.2px; }
   .nav-bar { display: flex; justify-content: space-around; border-top: 1px solid var(--border); padding: 8px 4px calc(12px + env(safe-area-inset-bottom)); background: var(--surface2); }
   .nav-item { background: transparent; border: none; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 6px 10px; color: var(--muted); }
   .nav-item.active { color: var(--accent); }
@@ -492,6 +492,7 @@
         '<button class="cal-cell' + (has ? " has" : "") + '" style="background:' + bg + ';border:' + border + ';" ' + (has ? 'data-action="select-day" data-day="' + key + '"' : "") + '>' +
           '<span class="d">' + d + '</span>' +
           (has ? '<span class="amt" style="color:' + (up ? "var(--win)" : "var(--loss)") + '">' + (up ? "+" : "-") + "$" + (Math.abs(total) >= 1000 ? (Math.abs(total) / 1000).toFixed(1) + "k" : Math.abs(total).toFixed(0)) + '</span>' : "") +
+          (has ? '<span class="trades-ct">' + list.length + (list.length === 1 ? " trade" : " trades") + '</span>' : "") +
         '</button>'
       );
     }
@@ -502,17 +503,20 @@
       // Pad to exactly 7 cells so the P&L always stays in the 8th grid column
       while (weekCells.length < 7) weekCells.push(null);
       let weekTotal = 0;
+      let weekTradeCount = 0;
       let weekHas = false;
       weekCells.forEach((d) => {
         if (d === null) return;
         const list = byDay[dateKey(d)] || [];
         if (list.length) weekHas = true;
+        weekTradeCount += list.length;
         weekTotal += list.reduce((s, e) => s + Number(e.pnl || 0), 0);
       });
       const cellsHtml = weekCells.map(renderCell).join("");
       const pnlClass = weekTotal >= 0 ? "win" : "loss";
+      const weekAmt = (weekTotal >= 0 ? "+" : "-") + "$" + (Math.abs(weekTotal) >= 1000 ? (Math.abs(weekTotal) / 1000).toFixed(1) + "k" : Math.abs(weekTotal).toFixed(0));
       const pnlCell = weekHas
-        ? '<div class="cal-cell-pl ' + pnlClass + '">' + fmtMoney(weekTotal) + '</div>'
+        ? '<div class="cal-cell-pl ' + pnlClass + '"><span>' + weekAmt + '</span><span class="trades-ct">' + weekTradeCount + (weekTradeCount === 1 ? " trade" : " trades") + '</span></div>'
         : '<div class="cal-cell-pl">—</div>';
       weeksHtml +=
         '<div class="cal-week">' +
@@ -528,10 +532,10 @@
     }
 
     return (
+      '<div class="cal-monthly-pl">Monthly P/L: <span style="color:' + (monthTotal >= 0 ? "var(--win)" : "var(--loss)") + '">' + fmtMoney(monthTotal) + '</span></div>' +
       '<div class="cal-header">' +
         '<button class="icon-btn" data-action="cal-prev">' + ICON.left + '</button>' +
-        '<div style="text-align:center;"><div class="eyebrow-sm">' + monthName.toUpperCase() + '</div>' +
-        '<div style="color:' + (monthTotal >= 0 ? "var(--win)" : "var(--loss)") + ';font-weight:700;font-family:ui-monospace,monospace;">' + fmtMoney(monthTotal) + '</div></div>' +
+        '<div class="eyebrow-sm">' + monthName.toUpperCase() + '</div>' +
         '<button class="icon-btn" data-action="cal-next">' + ICON.right + '</button>' +
       '</div>' +
       '<div class="week-row">' + ["S", "M", "T", "W", "T", "F", "S", "W PNL"].map((d) => '<div class="week-day">' + d + '</div>').join("") + '</div>' +
