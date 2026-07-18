@@ -518,7 +518,7 @@
       const weekAmt = (weekTotal >= 0 ? "+" : "-") + "$" + (Math.abs(weekTotal) >= 1000 ? (Math.abs(weekTotal) / 1000).toFixed(1) + "k" : Math.abs(weekTotal).toFixed(0));
       const pnlCell = weekHas
         ? '<div class="cal-cell-pl ' + pnlClass + '"><span>' + weekAmt + '</span><span class="trades-ct">' + weekTradeCount + (weekTradeCount === 1 ? " trade" : " trades") + '</span></div>'
-        : '<div class="cal-cell-pl">—</div>';
+        : '<div class="cal-cell-pl" style="border:1px solid var(--border2);">—</div>';
       weeksHtml +=
         '<div class="cal-week">' +
           '<div class="cal-grid">' + cellsHtml + pnlCell + '</div>' +
